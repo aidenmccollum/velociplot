@@ -1,5 +1,15 @@
 <script>
+    import { updated } from "$app/state";
     import { loadCSVData } from "$lib/index";
+    import { computeLarexEquation } from "$lib/larex";
+
+    let exampleData = {
+        load0: [0, 10, 20, 30, 5, 40, 1, 25],
+        load1: [5, 3, 10, 40, 20, 10, 25, 17],
+        load2: [2, 13, 20, 32, 19, 21, 34, 35],
+    };
+
+    console.log("Starting out with example data:", exampleData);
 
     let equations = [];
     let currentEquation = "";
@@ -9,6 +19,15 @@
     let dragStartWidth = 0;
 
     function addEquation() {
+        const [outputVar, updatedData] = computeLarexEquation(
+            currentEquation.trim(),
+            exampleData,
+        );
+        exampleData = updatedData;
+
+        console.log(`resulting data: ${outputVar}=[${exampleData[outputVar]}]`);
+
+        //adding the equation in text form to the product
         if (currentEquation.trim()) {
             equations = [...equations, currentEquation.trim()];
             currentEquation = "";
