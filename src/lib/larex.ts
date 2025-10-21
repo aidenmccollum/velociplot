@@ -77,3 +77,19 @@ function extractChannelNames(input: string): string[][] {
 
   return [outputChannels, inputChannels];
 }
+
+export function highlightEquation(equation: string) {
+  // Replace content within curly braces with green-highlighted version
+  equation = equation.replace(
+    /\{([^}]+)\}/g,
+    (match) => `<span class="text-green-400">${match}</span>`,
+  );
+
+  // replace curly braces with slightly dark gray coloring
+  equation = equation.replace(
+    /\{|\}/g,
+    (match) => `<span class="text-gray-400">${match}</span>`,
+  );
+
+  return equation;
+}
