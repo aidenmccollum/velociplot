@@ -1,6 +1,6 @@
 <script>
     import { updated } from "$app/state";
-    import { loadCSVData } from "$lib/index";
+    import { loadCSVData } from "$lib/importer";
     import { computeLarexEquation } from "$lib/larex";
 
     let exampleData = {
