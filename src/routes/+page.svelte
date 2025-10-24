@@ -1,7 +1,7 @@
 <script>
     import { updated } from "$app/state";
     import { loadCSVData } from "$lib/importer";
-    import { computeLarexEquation } from "$lib/larex";
+    import { computeLarexEquation, highlightEquation } from "$lib/larex";
 
     let exampleData = {
         load0: [0, 10, 20, 30, 5, 40, 1, 25],
@@ -125,7 +125,7 @@
                         >
                             <span
                                 class="text-sm font-mono text-gray-200 flex-1 mr-2"
-                                >{equation}</span
+                                >{@html highlightEquation(equation)}</span
                             >
                             <button
                                 on:click={() => removeEquation(index)}
