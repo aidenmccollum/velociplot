@@ -160,8 +160,10 @@
 
         <!-- Footer Info -->
         <div class="p-4 border-t border-gray-700/50 text-xs text-gray-500">
-            Click here to import CSV data
-            <button on:click={() => loadCSVData()}>Import</button>
+            <button
+                class=" hover:bg-green-600 text-white font-bold py-2 px-4 rounded border-green-600 border-2"
+                on:click={() => loadCSVData()}>Import CSV Data</button
+            >
         </div>
 
         <!-- Drag Handle -->
