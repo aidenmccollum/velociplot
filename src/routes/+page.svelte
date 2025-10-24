@@ -77,7 +77,12 @@
         style="width: {leftPaneWidth}%"
     >
         <div class="p-4 border-b border-gray-700/50">
-            <h1 class="text-2xl font-bold text-green-400">velociplot</h1>
+            <a
+                href="/landing"
+                class="text-2xl font-bold text-green-400 mb-3 px-3 py-2 bg-gray-900/50 hover:bg-gray-800/70 rounded-md transition-colors inline-block"
+            >
+                velociplot
+            </a>
         </div>
 
         <!-- Equation Input Section -->
