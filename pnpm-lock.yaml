@@ -11,6 +11,12 @@ importers:
       mathjs:
         specifier: ^15.0.0
         version: 15.0.0
+      plotly.js-dist:
+        specifier: ^3.1.2
+        version: 3.1.2
+      plotly.js-dist-min:
+        specifier: ^3.1.2
+        version: 3.1.2
     devDependencies:
       '@sveltejs/adapter-auto':
         specifier: ^6.0.0
@@ -685,6 +691,12 @@ packages:
     resolution: {integrity: sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==}
     engines: {node: '>=12'}
 
+  plotly.js-dist-min@3.1.2:
+    resolution: {integrity: sha512-GlgsV+1IMjPpyJWnWjHfD2SBczqke/JNPElLAZ5cUir3fz5D4WDcYyQFJLU60SjCvJXH+KTPp8SBuVIr084sOA==}
+
+  plotly.js-dist@3.1.2:
+    resolution: {integrity: sha512-ph5RmC373Ihyyyt3EVHnuVZLf97AIhiBugsVbAT2HiwCb+b5Rgg/gj5jpcyTWM0BN3smtjAKeLxuxMIQhALjAg==}
+
   postcss@8.5.6:
     resolution: {integrity: sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==}
     engines: {node: ^10 || ^12 || >=14}
@@ -1284,6 +1296,10 @@ snapshots:
   picocolors@1.1.1: {}
 
   picomatch@4.0.3: {}
+
+  plotly.js-dist-min@3.1.2: {}
+
+  plotly.js-dist@3.1.2: {}
 
   postcss@8.5.6:
     dependencies:

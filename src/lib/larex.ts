@@ -20,8 +20,9 @@ export function computeLarexEquation(
   // removing the curly braces around the vars and letting mathjs do the calculations using the reference variables
   const formattedEq = expr.replace(/\{([^{}]+)\}/g, (_, name) => {
     const varName = name.trim();
+    console.log(varName);
     //making sure channel is in the data
-    if (!data.hasOwnProperty(varName)) {
+    if (!Object.keys(data).includes(`${varName}`)) {
       throw new Error(`Unknown variable: ${varName}`);
     }
     // using the raw channel name as the unique identifier for mathjs
