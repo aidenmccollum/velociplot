@@ -3,7 +3,7 @@
 
     // Props for x and y data
     export let x: number[] = [];
-    export let y: number[] = [];
+    export let yDatasets: Array<number[]> = [];
     export let title: string = "My XY Plot";
     export let xAxisTitle: string = "X Axis";
     export let yAxisTitle: string = "Y Axis";
@@ -26,24 +26,27 @@
             autosize: true,
             margin: { l: 50, r: 30, t: 30, b: 50 },
         };
+        let dataset = [];
 
-        const data = [
-            {
+        for (const index in yDatasets) {
+            const y = yDatasets[index];
+            const data = {
                 x: x,
                 y: y,
                 mode: mode, // lines with clickable points
                 type: "scatter",
                 marker: { color: lineColor },
                 line: { color: lineColor },
-            },
-        ];
+            };
+            dataset.push(data);
+        }
 
         const config = {
             responsive: true,
             displayModeBar: false,
         };
 
-        Plotly.newPlot(plotDiv, data, layout, config);
+        Plotly.newPlot(plotDiv, dataset, layout, config);
     }
 
     onMount(async () => {
@@ -52,7 +55,7 @@
     });
 
     // React to prop changes
-    $: if (Plotly && plotDiv && x && y) {
+    $: if (Plotly && plotDiv && x && yDatasets) {
         createOrUpdatePlot();
     }
 </script>
