@@ -1,9 +1,10 @@
 <script>
     import { updated } from "$app/state";
     import { parseCSV } from "$lib/importer";
-    import { computeLarexEquation, highlightEquation } from "$lib/larex";
+    import { computeLarexEquation } from "$lib/larex";
     import { onMount } from "svelte";
     import Plot from "$lib/components/plot.svelte";
+    import Equation from "$lib/components/equation.svelte";
 
     // let data = {
     //     load0: [0, 10, 20, 30, 5, 40, 1, 25],
@@ -16,6 +17,7 @@
     let data = {};
 
     let equations = [];
+    let outputChannels = [];
     let currentEquation = "";
     let leftPaneWidth = 15; // percentage
     let isDragging = false;
@@ -23,8 +25,7 @@
     let dragStartWidth = 0;
     let selectedXChannel = null;
     let showXChannelMenu = false;
-    let selectedYChannel = null;
-    let showYChannelMenu = false;
+    let selectedYChannels = [];
 
     function addEquation() {
         const [outputVar, updatedData] = computeLarexEquation(
@@ -38,12 +39,22 @@
         //adding the equation in text form to the product
         if (currentEquation.trim()) {
             equations = [...equations, currentEquation.trim()];
+            outputChannels = [...outputChannels, outputVar];
+            // Automatically add new equation to selected channels (visible by default)
+            selectedYChannels = [...selectedYChannels, outputVar];
             currentEquation = "";
         }
     }
 
     function removeEquation(index) {
+        // Remove from selectedYChannels if present
+        const outputChannel = outputChannels[index];
+        selectedYChannels = selectedYChannels.filter(
+            (channel) => channel !== outputChannel,
+        );
+
         equations = equations.filter((_, i) => i !== index);
+        outputChannels = outputChannels.filter((_, i) => i !== index);
     }
 
     function handleKeypress(event) {
@@ -97,7 +108,7 @@
         <div class="flex-1 p-4 overflow-y-auto">
             <div class="space-y-3">
                 <label class="block text-sm font-medium text-gray-300">
-                    Enter Equations
+                    Equation Editor
                 </label>
 
                 <!-- Input Field -->
@@ -106,7 +117,7 @@
                         type="text"
                         bind:value={currentEquation}
                         on:keypress={handleKeypress}
-                        placeholder="y = x^2"
+                        placeholder="y=x^2"
                         class="w-full px-3 py-2 bg-gray-900/50 border border-gray-600/50 rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-transparent"
                     />
                     <button
@@ -133,33 +144,24 @@
                 <!-- Equations List -->
                 <div class="space-y-2 mt-4">
                     {#each equations as equation, index}
-                        <div
-                            class="flex items-center justify-between p-2 bg-gray-800/50 rounded-md group"
-                        >
-                            <span
-                                class="text-sm font-mono text-gray-200 flex-1 mr-2"
-                                >{@html highlightEquation(equation)}</span
-                            >
-                            <button
-                                on:click={() => removeEquation(index)}
-                                class="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                                title="Remove equation"
-                            >
-                                <svg
-                                    class="w-4 h-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
-                            </button>
-                        </div>
+                        <Equation
+                            {equation}
+                            {index}
+                            on:remove={(e) => removeEquation(e.detail.index)}
+                            on:show={(e) => {
+                                selectedYChannels = [
+                                    ...selectedYChannels,
+                                    outputChannels[e.detail.index],
+                                ];
+                            }}
+                            on:hide={(e) => {
+                                selectedYChannels = selectedYChannels.filter(
+                                    (channel) =>
+                                        channel !==
+                                        outputChannels[e.detail.index],
+                                );
+                            }}
+                        ></Equation>
                     {/each}
 
                     {#if equations.length === 0}
@@ -183,9 +185,9 @@
                     if (file) {
                         const text = await file.text();
                         data = await parseCSV(text);
-                        // Optionally reset selected channels
+                        // reset selected channels
                         selectedXChannel = null;
-                        selectedYChannel = null;
+                        selectedYChannels = [];
                     }
                 }}
             />
@@ -220,40 +222,15 @@
     >
         <div class="flex-1 p-5 flex min-h-0">
             <div class="flex flex-1 min-h-0">
-                <!-- Y Axis Button -->
-                <div class="flex items-center pr-2">
-                    {#if !showYChannelMenu}
-                        <button
-                            on:click={() => (showYChannelMenu = true)}
-                            class="bg-gray-800/80 hover:bg-gray-700/80 text-gray-200 font-medium py-1 px-2 rounded border border-gray-600/50 hover:border-green-500/50 transition-all"
-                            style="writing-mode: vertical-rl; transform: rotate(180deg);"
-                        >
-                            {selectedYChannel || "select Y channel"}
-                        </button>
-                    {:else}
-                        <div
-                            class="bg-gray-800/80 border border-gray-600/50 rounded p-2 space-y-1"
-                        >
-                            {#each Object.keys(data) as key}
-                                <button
-                                    on:click={() => {
-                                        selectedYChannel = key;
-                                        showYChannelMenu = false;
-                                    }}
-                                    class="block w-full text-left px-2 py-1 text-gray-200 hover:bg-gray-700/80 rounded text-sm"
-                                >
-                                    {key}
-                                </button>
-                            {/each}
-                        </div>
-                    {/if}
-                </div>
-
                 <!-- Plot Container -->
                 <div class="flex-1 flex flex-col min-h-0">
                     <Plot
                         x={data[selectedXChannel] || data[0]}
-                        y={data[selectedYChannel] || data[1]}
+                        yDatasets={selectedYChannels.length > 0
+                            ? selectedYChannels.map((key) => data[key])
+                            : data[1]
+                              ? [data[1]]
+                              : []}
                     ></Plot>
 
                     <!-- X Axis Button -->
