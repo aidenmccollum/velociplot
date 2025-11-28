@@ -1,23 +1,18 @@
 <script>
     import { updated } from "$app/state";
     import { parseCSV } from "$lib/importer";
-    import { computeLarexEquation } from "$lib/larex";
+    import { computeLarexEquation, highlightEquation } from "$lib/larex";
     import { onMount } from "svelte";
     import Plot from "$lib/components/plot.svelte";
     import Equation from "$lib/components/equation.svelte";
-
-    // let data = {
-    //     load0: [0, 10, 20, 30, 5, 40, 1, 25],
-    //     load1: [5, 3, 10, 40, 20, 10, 25, 17],
-    //     load2: [2, 13, 20, 32, 19, 21, 34, 35],
-    //     time: [0, 1, 2, 3, 4, 5, 6, 7],
-    // };
+    import EquationInput from "$lib/components/EquationInput.svelte";
 
     // console.log("Starting out with example data:", data);
     let data = {};
 
     let equations = [];
     let outputChannels = [];
+    let equationColors = [];
     let currentEquation = "";
     let leftPaneWidth = 15; // percentage
     let isDragging = false;
@@ -27,22 +22,90 @@
     let showXChannelMenu = false;
     let selectedYChannels = [];
 
+    // Define available colors for the line plots
+    const availableColors = [
+        "#00bfff", // cyan
+        "#ff6b6b", // red
+        "#4ecdc4", // teal
+        "#ffd93d", // yellow
+        "#a8e6cf", // mint
+        "#ff8b94", // pink
+        "#b4a7d6", // lavender
+        "#ffb347", // orange
+        "#77dd77", // pastel green
+        "#aec6cf", // pastel blue
+    ];
+
+    let colorIndex = 0;
+
+    function getNextColor() {
+        const color = availableColors[colorIndex % availableColors.length];
+        colorIndex++;
+        return color;
+    }
+
+    // Live preview of the equation being typed
+    let equationPreviewError = "";
+
+    // Validate equation as user types
+    function validateEquation(eq) {
+        if (!eq) {
+            equationPreviewError = "";
+            return;
+        }
+
+        try {
+            const match = eq.match(/^\{([^{}]+)\}\s*=\s*(.+)$/);
+            if (!match) {
+                equationPreviewError = "Format: {output} = expression";
+                return;
+            }
+
+            // Check if referenced channels exist
+            const channelRegex = /\{([^{}]+)\}/g;
+            let channelMatch;
+            const referencedChannels = [];
+
+            while ((channelMatch = channelRegex.exec(match[2])) !== null) {
+                const channelName = channelMatch[1].trim();
+                if (!Object.keys(data).includes(channelName)) {
+                    equationPreviewError = `Unknown channel: ${channelName}`;
+                    return;
+                }
+                referencedChannels.push(channelName);
+            }
+
+            equationPreviewError = "";
+        } catch (e) {
+            equationPreviewError = "Invalid equation";
+        }
+    }
+
+    // Watch for changes in currentEquation
+    $: validateEquation(currentEquation);
+
     function addEquation() {
-        const [outputVar, updatedData] = computeLarexEquation(
-            currentEquation.trim(),
-            data,
-        );
-        data = updatedData;
+        try {
+            const [outputVar, updatedData] = computeLarexEquation(
+                currentEquation.trim(),
+                data,
+            );
+            data = updatedData;
 
-        console.log(`resulting data: ${outputVar}=[${data[outputVar]}]`);
+            console.log(`resulting data: ${outputVar}=[${data[outputVar]}]`);
 
-        //adding the equation in text form to the product
-        if (currentEquation.trim()) {
-            equations = [...equations, currentEquation.trim()];
-            outputChannels = [...outputChannels, outputVar];
-            // Automatically add new equation to selected channels (visible by default)
-            selectedYChannels = [...selectedYChannels, outputVar];
-            currentEquation = "";
+            //adding the equation in text form to the product
+            if (currentEquation.trim()) {
+                equations = [...equations, currentEquation.trim()];
+                outputChannels = [...outputChannels, outputVar];
+                equationColors = [...equationColors, getNextColor()];
+                // Automatically add new equation to selected channels (visible by default)
+                selectedYChannels = [...selectedYChannels, outputVar];
+                currentEquation = "";
+                equationPreviewError = "";
+            }
+        } catch (error) {
+            equationPreviewError = error.message;
         }
     }
 
@@ -55,12 +118,12 @@
 
         equations = equations.filter((_, i) => i !== index);
         outputChannels = outputChannels.filter((_, i) => i !== index);
+        equationColors = equationColors.filter((_, i) => i !== index);
     }
 
-    function handleKeypress(event) {
-        if (event.key === "Enter") {
-            addEquation();
-        }
+    function changeEquationColor(index, newColor) {
+        equationColors[index] = newColor;
+        equationColors = [...equationColors]; // Trigger reactivity
     }
 
     function startDrag(event) {
@@ -111,18 +174,17 @@
                     Equation Editor
                 </label>
 
-                <!-- Input Field -->
+                <!-- Enhanced Input Field with live highlighting -->
                 <div class="relative">
-                    <input
-                        type="text"
+                    <EquationInput
                         bind:value={currentEquation}
-                        on:keypress={handleKeypress}
-                        placeholder="y=x^2"
-                        class="w-full px-3 py-2 bg-gray-900/50 border border-gray-600/50 rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-transparent"
+                        {data}
+                        placeholder={"{y} = {x}^2"}
+                        on:submit={addEquation}
                     />
                     <button
                         on:click={addEquation}
-                        class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-green-400 transition-colors"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-green-400 transition-colors z-20 bg-transparent backdrop-blur rounded-md"
                         title="Add equation"
                     >
                         <svg
@@ -141,13 +203,27 @@
                     </button>
                 </div>
 
+                <!-- Error display -->
+                {#if equationPreviewError}
+                    <div class="text-red-400 text-xs mt-1">
+                        {equationPreviewError}
+                    </div>
+                {/if}
+
                 <!-- Equations List -->
                 <div class="space-y-2 mt-4">
                     {#each equations as equation, index}
                         <Equation
                             {equation}
                             {index}
+                            color={equationColors[index]}
+                            {availableColors}
                             on:remove={(e) => removeEquation(e.detail.index)}
+                            on:colorChange={(e) =>
+                                changeEquationColor(
+                                    e.detail.index,
+                                    e.detail.color,
+                                )}
                             on:show={(e) => {
                                 selectedYChannels = [
                                     ...selectedYChannels,
@@ -231,6 +307,14 @@
                             : data[1]
                               ? [data[1]]
                               : []}
+                        colors={selectedYChannels.length > 0
+                            ? selectedYChannels.map((channel) => {
+                                  const idx = outputChannels.indexOf(channel);
+                                  return idx !== -1
+                                      ? equationColors[idx]
+                                      : "#00bfff";
+                              })
+                            : ["#00bfff"]}
                     ></Plot>
 
                     <!-- X Axis Button -->
@@ -244,13 +328,13 @@
                             </button>
                         {:else}
                             <div
-                                class="bg-gray-800/80 border border-gray-600/50 rounded p-2 space-y-1"
+                                class="bg-gray-800/80 border border-gray-600/50 rounded p-2 space-y-1 max-h-40 overflow-y-auto"
                             >
                                 {#each Object.keys(data) as key}
                                     <button
                                         on:click={() => {
-                                            selectedXChannel = key;
                                             showXChannelMenu = false;
+                                            selectedXChannel = key;
                                         }}
                                         class="block w-full text-left px-2 py-1 text-gray-200 hover:bg-gray-700/80 rounded text-sm"
                                     >

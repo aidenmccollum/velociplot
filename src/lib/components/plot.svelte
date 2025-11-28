@@ -8,6 +8,7 @@
     export let xAxisTitle: string = "X Axis";
     export let yAxisTitle: string = "Y Axis";
     export let lineColor: string = "#00bfff";
+    export let colors: string[] = [];
     export let mode: string = "lines+markers";
 
     let plotDiv: HTMLDivElement;
@@ -30,13 +31,14 @@
 
         for (const index in yDatasets) {
             const y = yDatasets[index];
+            const color = colors[index] || lineColor;
             const data = {
                 x: x,
                 y: y,
                 mode: mode, // lines with clickable points
                 type: "scatter",
-                marker: { color: lineColor },
-                line: { color: lineColor },
+                marker: { color: color },
+                line: { color: color },
             };
             dataset.push(data);
         }
@@ -54,8 +56,10 @@
         createOrUpdatePlot();
     });
 
-    // React to prop changes
-    $: if (Plotly && plotDiv && x && yDatasets) {
+    // React to prop changes - include all props that should trigger a re-render
+    $: if (Plotly && plotDiv) {
+        // Explicitly reference all props we want to watch
+        (x, yDatasets, colors);
         createOrUpdatePlot();
     }
 </script>

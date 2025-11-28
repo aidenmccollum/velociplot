@@ -4,8 +4,11 @@
 
     export let equation: string = "";
     export let index: number;
+    export let color: string = "#00bfff";
+    export let availableColors: string[] = [];
 
     let equationVisible = true;
+    let showColorPicker = false;
 
     const dispatch = createEventDispatcher();
 
@@ -20,11 +23,63 @@
     function hideEquation() {
         dispatch("hide", { index });
     }
+
+    function selectColor(newColor: string) {
+        dispatch("colorChange", { index, color: newColor });
+        showColorPicker = false;
+    }
+
+    function toggleColorPicker(event: MouseEvent) {
+        event.stopPropagation();
+        showColorPicker = !showColorPicker;
+    }
+
+    function handleClickOutside(event: MouseEvent) {
+        if (
+            showColorPicker &&
+            !(event.target as HTMLElement).closest(".color-picker-container")
+        ) {
+            showColorPicker = false;
+        }
+    }
 </script>
+
+<svelte:window on:click={handleClickOutside} />
 
 <div
     class="flex items-center justify-between p-2 bg-gray-800/50 rounded-md group"
 >
+    <!-- Color dot and picker -->
+    <div class="relative color-picker-container">
+        <button
+            on:click={toggleColorPicker}
+            class="w-4 h-4 rounded-full border-2 border-gray-600 hover:border-gray-400 transition-all mr-2"
+            style="background-color: {color}"
+            aria-label="Change color"
+            title="Click to change color"
+        ></button>
+
+        {#if showColorPicker}
+            <div
+                class="absolute left-0 top-6 z-50 bg-gray-800 border border-gray-600 rounded-lg p-2 shadow-xl w-max"
+            >
+                <div class="grid grid-cols-5 gap-1" style="width: 140px;">
+                    {#each availableColors as availableColor}
+                        <button
+                            on:click={() => selectColor(availableColor)}
+                            class="w-6 h-6 rounded-full border-2 hover:scale-110 transition-transform {availableColor ===
+                            color
+                                ? 'border-white'
+                                : 'border-gray-600'}"
+                            style="background-color: {availableColor}"
+                            aria-label="Select color {availableColor}"
+                        ></button>
+                    {/each}
+                </div>
+            </div>
+        {/if}
+    </div>
+
     <span class="text-sm font-mono text-gray-200 flex-1 mr-2"
         >{@html highlightEquation(equation)}</span
     >
@@ -84,6 +139,7 @@
         on:click={removeEquation}
         class="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
         title="Remove equation"
+        aria-label="Remove equation"
     >
         <svg
             class="w-4 h-4"
