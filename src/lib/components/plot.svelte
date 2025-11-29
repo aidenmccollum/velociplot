@@ -45,7 +45,8 @@
 
         const config = {
             responsive: true,
-            displayModeBar: false,
+            displayModebar: true,
+            showlegend: false,
         };
 
         Plotly.newPlot(plotDiv, dataset, layout, config);
