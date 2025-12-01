@@ -13,13 +13,17 @@
     let outputChannels = [];
     let equationColors = [];
     let currentEquation = "";
-    let leftPaneWidth = 15; // percentage
+    let leftPaneWidth = 20; // percentage
     let isDragging = false;
     let dragStartX = 0;
     let dragStartWidth = 0;
     let selectedXChannel = null;
     let showXChannelMenu = false;
     let selectedYChannels = [];
+
+    // Annotation state
+    let annotations = [];
+    let annotationMode = false;
 
     let showNotification = false;
     let notificationType = "success";
@@ -240,6 +244,15 @@
         notificationMessage = message;
         showNotification = true;
     }
+
+    function handleAddAnnotation(event) {
+        annotations = [...annotations, event.detail];
+        annotationMode = false;
+    }
+
+    function removeAnnotation(index) {
+        annotations = annotations.filter((_, i) => i !== index);
+    }
 </script>
 
 <svelte:window on:mousemove={handleDrag} on:mouseup={stopDrag} />
@@ -263,7 +276,11 @@
                 href="/"
                 class="text-2xl font-bold text-green-400 px-3 py-2 bg-gray-900/50 hover:bg-gray-800/70 rounded-md transition-colors inline-block"
             >
-                velociplot
+                <img
+                    src="/src/lib/assets/Velociplot_text_logo.png"
+                    alt="velociplot"
+                    class="h-12 w-auto"
+                />
             </a>
         </div>
 
@@ -274,7 +291,6 @@
                     Equation Editor
                 </label>
 
-                <!-- Enhanced Input Field with live highlighting -->
                 <div class="relative">
                     <EquationInput
                         bind:value={currentEquation}
@@ -303,14 +319,12 @@
                     </button>
                 </div>
 
-                <!-- Error display -->
                 {#if equationPreviewError}
                     <div class="text-red-400 text-xs mt-1">
                         {equationPreviewError}
                     </div>
                 {/if}
 
-                <!-- Equations List -->
                 <div class="space-y-2 mt-4">
                     {#each equations as equation, index}
                         <Equation
@@ -346,6 +360,55 @@
                         </p>
                     {/if}
                 </div>
+
+                {#if annotations.length > 0}
+                    <div class="mt-6">
+                        <label
+                            class="block text-sm font-medium text-gray-300 mb-2"
+                        >
+                            Annotations
+                        </label>
+                        <div class="bg-gray-800/50 rounded-lg p-3">
+                            <div class="space-y-1">
+                                {#each annotations as annotation, i}
+                                    <div
+                                        class="flex items-center justify-between bg-gray-900/50 rounded px-2 py-1"
+                                    >
+                                        <span class="text-sm text-yellow-400"
+                                            >{annotation.text}</span
+                                        >
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-xs text-gray-500"
+                                                >x: {annotation.x.toFixed(
+                                                    3,
+                                                )}</span
+                                            >
+                                            <button
+                                                on:click={() =>
+                                                    removeAnnotation(i)}
+                                                class="text-red-400 hover:text-red-300"
+                                            >
+                                                <svg
+                                                    class="w-4 h-4"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M6 18L18 6M6 6l12 12"
+                                                    />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                {/each}
+                            </div>
+                        </div>
+                    </div>
+                {/if}
             </div>
         </div>
 
@@ -361,7 +424,6 @@
                     if (file) {
                         const text = await file.text();
                         data = await parseCSV(text);
-                        console.log(data);
                         if (
                             data !== null &&
                             typeof data === "object" &&
@@ -381,13 +443,36 @@
                     }
                 }}
             />
-            <button
-                class=" hover:bg-green-600 text-white font-bold py-2 px-4 rounded border-green-600 border-2"
-                on:click={() => {
-                    let input = document.getElementById("fileInput");
-                    input.click();
-                }}>Import CSV Data</button
-            >
+            <div class="flex items-center gap-4">
+                <button
+                    class=" hover:bg-green-600 text-white font-bold py-2 px-4 rounded border-green-600 border-2"
+                    on:click={() => {
+                        let input = document.getElementById("fileInput");
+                        input.click();
+                    }}>Import CSV Data</button
+                >
+                <button
+                    on:click={() => (annotationMode = !annotationMode)}
+                    class="px-3 py-2 rounded border transition-all text-sm font-medium flex items-center gap-2 {annotationMode
+                        ? 'bg-yellow-600/20 border-yellow-500 text-yellow-400'
+                        : 'bg-gray-800/80 border-gray-600/50 text-gray-400 hover:border-yellow-500/50'}"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        class="size-5"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+                        />
+                    </svg>
+                </button>
+            </div>
         </div>
 
         <!-- Drag Handle -->
@@ -429,20 +514,23 @@
                                       : "#00bfff";
                               })
                             : ["#00bfff"]}
-                    ></Plot>
+                        {annotations}
+                        {annotationMode}
+                        on:addAnnotation={handleAddAnnotation}
+                    />
 
-                    <!-- X Axis Button -->
                     <div class="flex justify-center mt-2">
                         {#if !showXChannelMenu}
+                            <!-- X Axis Button -->
                             <button
                                 on:click={() => (showXChannelMenu = true)}
-                                class="bg-gray-800/80 hover:bg-gray-700/80 text-gray-200 font-medium py-1 px-2 rounded border border-gray-600/50 hover:border-green-500/50 transition-all"
+                                class="bg-gray-800/80 hover:bg-gray-700/80 text-gray-200 font-medium py-1 px-3 rounded border border-gray-600/50 hover:border-green-500/50 transition-all"
                             >
-                                {selectedXChannel || "select X channel"}
+                                {selectedXChannel || "Select X Channel"}
                             </button>
                         {:else}
                             <div
-                                class="bg-gray-800/80 border border-gray-600/50 rounded p-2 space-y-1 max-h-40 overflow-y-auto"
+                                class=" bg-gray-800/80 border border-gray-600/50 rounded p-2 space-y-1 max-h-40 overflow-y-auto z-10"
                             >
                                 {#each Object.keys(data) as key}
                                     <button
