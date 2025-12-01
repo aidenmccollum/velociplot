@@ -1,11 +1,10 @@
 <script>
-    import { updated } from "$app/state";
     import { parseCSV } from "$lib/importer";
     import { computeLarexEquation, highlightEquation } from "$lib/larex";
-    import { onMount } from "svelte";
     import Plot from "$lib/components/plot.svelte";
     import Equation from "$lib/components/equation.svelte";
     import EquationInput from "$lib/components/EquationInput.svelte";
+    import Notification from "$lib/components/Notification.svelte";
 
     // console.log("Starting out with example data:", data);
     let data = {};
@@ -21,6 +20,10 @@
     let selectedXChannel = null;
     let showXChannelMenu = false;
     let selectedYChannels = [];
+
+    let showNotification = false;
+    let notificationType = "success";
+    let notificationMessage = "";
 
     // Define available colors for the line plots
     const availableColors = [
@@ -231,9 +234,23 @@
     function stopDrag() {
         isDragging = false;
     }
+
+    function showNotice(type, message) {
+        notificationType = type;
+        notificationMessage = message;
+        showNotification = true;
+    }
 </script>
 
 <svelte:window on:mousemove={handleDrag} on:mouseup={stopDrag} />
+
+{#if showNotification}
+    <Notification
+        type={notificationType}
+        message={notificationMessage}
+        onClose={() => (showNotification = false)}
+    />
+{/if}
 
 <div class="flex h-screen bg-gray-900/95 text-gray-100">
     <!-- Sidebar -->
@@ -344,7 +361,21 @@
                     if (file) {
                         const text = await file.text();
                         data = await parseCSV(text);
-                        // reset selected channels
+                        console.log(data);
+                        if (
+                            data !== null &&
+                            typeof data === "object" &&
+                            !Array.isArray(data)
+                        ) {
+                            showNotice(
+                                "success",
+                                "CSV file loaded successfully!",
+                            );
+                        } else {
+                            showNotice("error", "Invalid CSV file format");
+                            data = {};
+                        }
+
                         selectedXChannel = null;
                         selectedYChannels = [];
                     }
