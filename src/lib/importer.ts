@@ -1,3 +1,9 @@
+let onDataParsed: (() => void) | null = null;
+
+export function setOnDataParsed(callback: () => void) {
+  onDataParsed = callback;
+}
+
 export function parseCSV(csvText: string): Record<string, number[]> {
   const allLines = csvText.split("\n");
 
@@ -36,6 +42,11 @@ export function parseCSV(csvText: string): Record<string, number[]> {
         );
       }
     }
+  }
+
+  // Trigger the callback when data is successfully parsed
+  if (onDataParsed) {
+    onDataParsed();
   }
 
   return data;

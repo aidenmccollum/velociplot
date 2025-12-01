@@ -1,6 +1,6 @@
 <script>
     import { updated } from "$app/state";
-    import { parseCSV } from "$lib/importer";
+    import { parseCSV, setOnDataParsed } from "$lib/importer";
     import { computeLarexEquation, highlightEquation } from "$lib/larex";
     import { onMount } from "svelte";
     import Plot from "$lib/components/plot.svelte";
@@ -13,6 +13,7 @@
     let equations = [];
     let outputChannels = [];
     let equationColors = [];
+    let showDataLoadedMessage = false;
     let currentEquation = "";
     let leftPaneWidth = 15; // percentage
     let isDragging = false;
@@ -43,6 +44,16 @@
         colorIndex++;
         return color;
     }
+
+    // Set up the data loaded callback
+    onMount(() => {
+        setOnDataParsed(() => {
+            showDataLoadedMessage = true;
+            setTimeout(() => {
+                showDataLoadedMessage = false;
+            }, 3000);
+        });
+    });
 
     // Live preview of the equation being typed
     let equationPreviewError = "";
@@ -234,6 +245,18 @@
 </script>
 
 <svelte:window on:mousemove={handleDrag} on:mouseup={stopDrag} />
+
+<!-- Data Loaded Confirmation Message -->
+{#if showDataLoadedMessage}
+    <div class="fixed inset-0 flex items-center justify-center pointer-events-none z-50">
+        <div class="bg-green-500/90 text-white px-8 py-6 rounded-lg shadow-2xl flex items-center gap-3 animate-pulse">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+            <span class="font-semibold text-lg">Data Loaded Successfully!</span>
+        </div>
+    </div>
+{/if}
 
 <div class="flex h-screen bg-gray-900/95 text-gray-100">
     <!-- Sidebar -->
