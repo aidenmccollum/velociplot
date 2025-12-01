@@ -17,8 +17,13 @@ export function computeLarexEquation(
 
   const [, outputVar, expr] = match;
 
+  let formattedEq = expr;
+
+  // Check if expression contains AVG function
+  formattedEq = calculateAvgOperation(formattedEq, data);
+
   // removing the curly braces around the vars and letting mathjs do the calculations using the reference variables
-  const formattedEq = expr.replace(/\{([^{}]+)\}/g, (_, name) => {
+  formattedEq = formattedEq.replace(/\{([^{}]+)\}/g, (_, name) => {
     const varName = name.trim();
     console.log(varName);
     //making sure channel is in the data
@@ -41,6 +46,35 @@ export function computeLarexEquation(
 
   //returning the calculated data to process the results
   return [outputVar.trim(), data];
+}
+
+function calculateAvgOperation(
+  formattedEq: string,
+  data: Record<string, number[]>,
+) {
+  // Handle AVG() function - matches AVG(...) with any content inside
+  return formattedEq.replace(/AVG\s*\((.*?)\)/gi, (match, args) => {
+    // Extract channel names from the arguments
+    const channelMatches = args.match(/\{([^{}]+)\}/g);
+    if (!channelMatches || channelMatches.length === 0) {
+      throw new Error("AVG() must contain at least one channel");
+    }
+
+    // Extract and validate channel names
+    const channelNames: string[] = [];
+    for (const channelMatch of channelMatches) {
+      const channelName = channelMatch.replace(/[{}]/g, "").trim();
+      if (!Object.keys(data).includes(channelName)) {
+        throw new Error(`Unknown variable in AVG: ${channelName}`);
+      }
+      channelNames.push(channelName);
+    }
+
+    // Build the averaging expression for mathjs
+    // (channel1 + channel2 + channel3) / 3
+    const sumExpr = channelNames.join(" + ");
+    return `((${sumExpr}) / ${channelNames.length})`;
+  });
 }
 
 export function checkLarexFormat(
@@ -80,6 +114,12 @@ function extractChannelNames(input: string): string[][] {
 }
 
 export function highlightEquation(equation: string) {
+  // Highlight AVG function in blue (do this first to preserve it)
+  equation = equation.replace(
+    /\bAVG\b/gi,
+    (match) => `<span class="text-blue-400">${match}</span>`,
+  );
+
   // Replace content within curly braces with green-highlighted version
   equation = equation.replace(
     /\{([^}]+)\}/g,

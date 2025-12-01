@@ -55,18 +55,42 @@
         }
 
         try {
-            const match = eq.match(/^\{([^{}]+)\}\s*=\s*(.+)$/);
-            if (!match) {
-                equationPreviewError = "Format: {output} = expression";
+            // Check if it's just a channel name in brackets (no equals sign)
+            if (!eq.includes("=")) {
+                const channelMatch = eq.trim().match(/^\{([^{}]+)\}$/);
+                if (!channelMatch) {
+                    equationPreviewError =
+                        "Format: {channel_name} or {output} = expression";
+                    return;
+                }
+                const channelName = channelMatch[1].trim();
+                if (!Object.keys(data).includes(channelName)) {
+                    equationPreviewError = `Unknown channel: ${channelName}`;
+                    return;
+                }
+                equationPreviewError = "";
                 return;
             }
 
-            // Check if referenced channels exist
+            // Otherwise, validate as an equation
+            const match = eq.match(/^\{([^{}]+)\}\s*=\s*(.+)$/);
+            if (!match) {
+                equationPreviewError =
+                    "Format: {channel_name} or {output} = expression";
+                return;
+            }
+
+            let expression = match[2];
+
+            // validate channels within AVG() functions
+            expression = validateAVGOperation(expression, data);
+
+            // Check remaining referenced channels
             const channelRegex = /\{([^{}]+)\}/g;
             let channelMatch;
             const referencedChannels = [];
 
-            while ((channelMatch = channelRegex.exec(match[2])) !== null) {
+            while ((channelMatch = channelRegex.exec(expression)) !== null) {
                 const channelName = channelMatch[1].trim();
                 if (!Object.keys(data).includes(channelName)) {
                     equationPreviewError = `Unknown channel: ${channelName}`;
@@ -81,37 +105,97 @@
         }
     }
 
-    // Watch for changes in currentEquation
     $: validateEquation(currentEquation);
+
+    function validateAVGOperation(expression, data) {
+        const avgRegex = /AVG\s*\((.*?)\)/gi;
+        let avgMatch;
+        while ((avgMatch = avgRegex.exec(expression)) !== null) {
+            const avgContent = avgMatch[1];
+            const avgChannelRegex = /\{([^{}]+)\}/g;
+            let avgChannelMatch;
+
+            const avgChannels = [];
+            while (
+                (avgChannelMatch = avgChannelRegex.exec(avgContent)) !== null
+            ) {
+                const channelName = avgChannelMatch[1].trim();
+                console.log(data);
+                if (!Object.keys(data).includes(channelName)) {
+                    equationPreviewError = `Unknown channel in AVG: ${channelName}`;
+                    return;
+                }
+                avgChannels.push(channelName);
+            }
+
+            if (avgChannels.length === 0) {
+                equationPreviewError =
+                    "AVG() must contain at least one channel";
+                return;
+            }
+
+            expression = expression.replace(avgMatch[0], "");
+        }
+        return expression;
+    }
 
     function addEquation() {
         try {
+            const trimmedInput = currentEquation.trim();
+
+            if (!trimmedInput) {
+                return;
+            }
+
+            if (!trimmedInput.includes("=")) {
+                const channelMatch = trimmedInput.match(/^\{([^{}]+)\}$/);
+
+                if (!channelMatch) {
+                    equationPreviewError =
+                        "Format: {channel_name} or {output} = expression";
+                    return;
+                }
+
+                const channelName = channelMatch[1].trim();
+
+                if (!Object.keys(data).includes(channelName)) {
+                    equationPreviewError = `Unknown channel: ${channelName}`;
+                    return;
+                }
+
+                if (!selectedYChannels.includes(channelName)) {
+                    selectedYChannels = [...selectedYChannels, channelName];
+                    equations = [...equations, trimmedInput];
+                    outputChannels = [...outputChannels, channelName];
+                    equationColors = [...equationColors, getNextColor()];
+                }
+
+                currentEquation = "";
+                equationPreviewError = "";
+                return;
+            }
+
             const [outputVar, updatedData] = computeLarexEquation(
-                currentEquation.trim(),
+                trimmedInput,
                 data,
             );
             data = updatedData;
 
-            console.log(`resulting data: ${outputVar}=[${data[outputVar]}]`);
+            equations = [...equations, trimmedInput];
+            outputChannels = [...outputChannels, outputVar];
+            equationColors = [...equationColors, getNextColor()];
 
-            //adding the equation in text form to the product
-            if (currentEquation.trim()) {
-                equations = [...equations, currentEquation.trim()];
-                outputChannels = [...outputChannels, outputVar];
-                equationColors = [...equationColors, getNextColor()];
-                // Automatically add new equation to selected channels (visible by default)
-                selectedYChannels = [...selectedYChannels, outputVar];
-                currentEquation = "";
-                equationPreviewError = "";
-            }
+            selectedYChannels = [...selectedYChannels, outputVar];
+            currentEquation = "";
+            equationPreviewError = "";
         } catch (error) {
             equationPreviewError = error.message;
         }
     }
 
     function removeEquation(index) {
-        // Remove from selectedYChannels if present
         const outputChannel = outputChannels[index];
+        console.log(`Removing equation at index ${index}: ${outputChannel}`);
         selectedYChannels = selectedYChannels.filter(
             (channel) => channel !== outputChannel,
         );
@@ -141,7 +225,6 @@
         const deltaPercent = (deltaX / windowWidth) * 100;
         const newWidth = dragStartWidth + deltaPercent;
 
-        // Constrain between 10% and 50%
         leftPaneWidth = Math.min(50, Math.max(10, newWidth));
     }
 
