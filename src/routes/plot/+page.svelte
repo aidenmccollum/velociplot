@@ -361,7 +361,6 @@
                     if (file) {
                         const text = await file.text();
                         data = await parseCSV(text);
-                        console.log(data);
                         if (
                             data !== null &&
                             typeof data === "object" &&
